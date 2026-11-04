@@ -1,0 +1,28 @@
+// Workspace settings for THIS folder only (codespace-starter). Unlike the
+// settings in .devcontainer/devcontainer.json, which apply to every folder
+// in the Codespace — including the student's own repo — these apply only
+// while codespace-starter is the open folder.
+//
+// Hide everything from the Explorer so the starting view is as simple as
+// possible (David, 2026-10-09): students start from the terminal and the
+// READY banner, and connect-repo opens their own repo, where nothing is
+// hidden.
+//   - .devcontainer: the launcher itself. Tutorials that look inside it use
+//     the terminal (`ls .devcontainer`, `code .devcontainer/devcontainer.json`),
+//     which the Explorer setting does not affect.
+//   - .github: the launcher-tests CI workflow.
+//   - .vscode: this file.
+// (.devcontainer/tests was listed separately before .devcontainer itself
+// was hidden; it stays listed so hiding survives if .devcontainer is ever
+// shown again.)
+// Hidden, not deleted: CI still runs on every launcher change, and the
+// folders still show on GitHub and in `ls -a`. If the setting were moved to
+// devcontainer.json it would hide .github in students' own repos too.
+{
+  "files.exclude": {
+    ".devcontainer": true,
+    ".github": true,
+    ".devcontainer/tests": true,
+    ".vscode": true
+  }
+}

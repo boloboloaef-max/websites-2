@@ -1,0 +1,474 @@
+{
+  "name": "Preceptor's Primer",
+
+  // Distribution model (settled): students launch a Codespace directly ON
+  // PPBDS/codespace-starter and run connect-repo.sh to create or clone their
+  // own work repo — they do NOT "Use this template", fork, or use Classroom.
+  // Because they launch from THIS repo, they get its Codespaces prebuild
+  // (enabled in Settings → Codespaces), so first launches are fast. Their work
+  // repo is just data, opened as a folder inside the same Codespace; it needs
+  // no prebuild of its own.
+
+  // (Operational note: trivial edits near this line re-fire the Codespaces
+  // prebuild when a repin merge fails to trigger one. Happened 2026-08-08
+  // (GitHub dropped the trigger), 2026-08-09 (merge landed while another
+  // prebuild ran; concurrent runs are skipped, not queued), and 2026-08-11
+  // (dropped again, no concurrent run — this is a recurring GitHub flake,
+  // so KEEP this note). Also note: an ordinary push to main touching this
+  // file does not reliably fire a prebuild either — the 2026-08-11 "better
+  // start up" push never triggered one.)
+  // The PPBDS image, pinned to v1.3.6. Since v1.0.0 there is ONE image for
+  // the whole org (ghcr.io/ppbds/devcontainer — it replaced the old
+  // devcontainers/base + /dev + /student trio, and additionally bakes the
+  // package-development tooling: devtools, pkgdown, roxygen2, testthat,
+  // usethis, qpdf). Bumping is a deliberate edit to this line — never use
+  // `:latest` in student-facing config, since it would float silently with
+  // every push to PPBDS/devcontainers.
+  //
+  // WHEN BUMPING THIS PIN there is ONE other place: PPBDS/primer's
+  // .devcontainer pins this image too. The tutorial package repos
+  // (vscode.tutorials, misc.tutorials, ims.tutorials) no longer pin it:
+  // since 2026-10-31 their "student-env-render" CI job reads the tag from
+  // THIS file at run time, so they always render every tutorial inside the
+  // image students actually run (until then the tag was hardcoded in five
+  // places and bumped by hand).
+  //
+  // Bakes in: every VS Code extension listed below (so nothing installs at
+  // attach), gh, quarto, arf (Rust R console), httpgd, pak,
+  // vscode.tutorials, misc.tutorials, ims.tutorials (all Quarto tutorials
+  // on learnr2; tutorial.helpers and primer.tutorials were dropped in
+  // v1.2.5), primer.data (for the primer book),
+  // learnr2 (what the baked R Tutorials extension, 1.1.0+, lists and runs
+  // tutorials through), sess (vscode-R 3.x's session bridge, baked at the
+  // exact version the baked extension bundles),
+  // an images + animation set (magick/rsvg/webp/png/jpeg, ggimage/
+  // ggpattern/ggfx, gganimate with gifski + av, transformr, camcorder; and
+  // Pillow/scikit-image/imageio on the Python side, plus the ffmpeg CLI),
+  // a modeling stack (tidymodels + xgboost/lightgbm/catboost/randomForest/
+  // ranger/glmnet engines + brms for Bayesian/Stan),
+  // a mapping/census stack (sf + tidycensus/tigris for census-tract maps,
+  // plus the Kyle Walker toolkit: mapgl for token-free WebGL vector maps via
+  // maplibre() + CARTO styles, crsuggest for CRS picks, idbr for
+  // international Census data — live tidycensus/idbr queries need each
+  // student's free Census API key),
+  // an inference-reporting/presentation set used throughout the primer book
+  // and tutorials (gt tables, marginaleffects, patchwork, easystats),
+  // a basic Python data-science stack
+  // (numpy/pandas/matplotlib/seaborn/scikit-learn/statsmodels/jupyter in a venv
+  // at /opt/venv, the default `python`), interactive-viz + Shinylive
+  // packages (R plotly/leaflet/DT/crosstalk + Python plotly/altair/folium/
+  // itables; shiny+shinylive compile to WebAssembly for static hosting),
+  // Observable (Quarto renders {ojs} cells out of the box; the `observable`
+  // Framework CLI is also installed), and five AI coding CLIs:
+  //   - claude  (Anthropic)         — sign in with a Claude plan, or ANTHROPIC_API_KEY
+  //   - codex   (OpenAI)            — sign in with a ChatGPT plan, or `codex login`
+  //   - agy     (Antigravity/Google)— sign in with a Google account, or ANTIGRAVITY_API_KEY
+  //   - grok    (Grok Build/xAI)    — sign in with a SuperGrok or X Premium+ plan
+  //   - aider   (multi-provider)    — key-only: DeepSeek/OpenRouter for cheap models
+  // Signing in on first run is the recommended path; API keys (set as
+  // Codespaces user secrets at https://github.com/settings/codespaces) are
+  // the fallback. See https://github.com/PPBDS/devcontainers for details.
+  //
+  // Note for instructors: `gh` is preinstalled and authenticated against
+  // the Codespace's home repo via the built-in GITHUB_TOKEN. Pushing to
+  // OTHER repos (e.g., cloning a sibling package and pushing to it)
+  // requires a one-time `gh auth login` per Codespace — that's by design,
+  // not a bug. The built-in token is read-mostly outside the home repo.
+  "image": "ghcr.io/ppbds/devcontainer:1.3.6",
+
+  // Forward the R tutorial server's port SILENTLY. learnr2::run_tutorial()
+  // (which the R Tutorials extension calls) always serves on port 7446 and
+  // opens the tutorial in a new browser tab itself, via VS Code's BROWSER
+  // helper. Without this entry, VS Code ALSO auto-forwards the new port with
+  // its default "notify" behaviour: an "Open in Browser" pop-up whose button
+  // opens the server's root page, which redirects to the same tutorial, so a
+  // student who clicks it gets the tutorial twice in two tabs. "silent" keeps
+  // the forwarding (the tutorial needs it) and drops only the pop-up. Do NOT
+  // use "ignore": that stops forwarding and the tutorial won't load.
+  // Every course tutorial is Quarto on learnr2 (classic learnr left the
+  // image in v1.2.6), so 7446 is the only tutorial port.
+  //
+  // Live Server (5500, and 5501+ when a window reload leaves the old
+  // extension host holding 5500 for its grace period) is silenced too, since
+  // image v1.3.1: the image's xdg-open now opens the clicked file in a new
+  // tab itself (issue #74), so the "port is available" pop-up — whose button
+  // opens the port ROOT, a directory listing — would only produce a second,
+  // wrong tab. Before v1.3.1 that pop-up was the only way a tab opened at
+  // all, which is why it stayed until the fix was proven in a live Codespace
+  // (2026-10-24). Forwarding itself must stay on: the tab is served through
+  // the forwarded address.
+  "portsAttributes": {
+    "7446": {
+      "label": "R tutorials",
+      "onAutoForward": "silent"
+    },
+    "5500-5510": {
+      "label": "Live Server",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // NO postCreateCommand right now — RETIRED 2026-07-30. All course
+  // packages ship at whatever versions the image baked; the live at-create
+  // refresh of a course package was removed because the baked version is
+  // recent enough, making creates faster and GitHub-independent.
+  //
+  // The discussion below is KEPT ON PURPOSE: it is the recipe if course
+  // content ever again needs to move faster than image releases. To revive,
+  // restore this line here, naming the package to track (one of the baked
+  // course packages, e.g. vscode.tutorials):
+  //
+  //   "postCreateCommand": "R -q -e 'pak::pkg_install(\"PPBDS/vscode.tutorials\", ask = FALSE)'",
+  //
+  // and re-read the following before doing so:
+  //
+  // - It MUST be postCreateCommand, not onCreate/updateContentCommand:
+  //   those run at prebuild time and would re-freeze "latest" at the
+  //   prebuild, recreating the manual-update problem this solves. postCreate
+  //   runs live when each Codespace is created, even from a prebuild. A
+  //   failed postCreateCommand doesn't block the Codespace from opening, and
+  //   the image's baked copy remains as the fallback.
+  //
+  // - No upgrade = TRUE: deps are already baked at known-good versions, so
+  //   the refresh touches only the named package and avoids re-churning the
+  //   knitr/xfun chain (see the xfun ABI note in the devcontainers
+  //   Dockerfile).
+  //
+  // - ACCEPTED RISK — blast radius: tracking GitHub HEAD means a bad commit
+  //   to the refreshed package breaks EVERY new Codespace at once, with no
+  //   pinned image to shield us. The mitigation is operational, not config:
+  //   revert the offending commit upstream ASAP — that fixes all subsequent
+  //   creates immediately, with no image rebuild or pin bump needed.
+
+  // One-time per-Codespace setup (setup.sh): installs the `connect-repo`
+  // wrapper on PATH, and two shell snippets — the short beginner prompt and
+  // the hook that prints the "YOUR CODESPACE IS READY" banner (welcome.sh) in
+  // the terminal Codespaces opens on its own — in
+  // ~/.config/codespace-starter/bashrc.d, sourced by ONE block appended to
+  // ~/.bashrc. That directory is the only place any starter script writes
+  // in the student's home (connect-repo adds its snippets and repo marker
+  // there too), so a student's own dotfiles can tell our lines from theirs
+  // (2026-10-30). onCreateCommand runs at PREBUILD time (or at create when
+  // no prebuild is available), so all of it is in place before the first
+  // terminal exists; its output goes to the hidden creation log, which is
+  // fine because it prints nothing students need.
+  //
+  // ONE terminal, by design (2026-10). Until then the banner came from a
+  // postAttachCommand, which runs in a visible terminal — but that terminal
+  // was a SECOND one ("Codespaces: Welcome!") beside the default "bash" one
+  // Codespaces creates before any extension activates. Students asked why
+  // there were two; the default one carried a "⚠ extensions want to relaunch
+  // the terminal" warning that no setting suppresses (hideOnStartup did not
+  // prevent it — verified 2026-09-17); and the image needed a first-run notice
+  // to bridge the gap before postAttach fired. Printing from .bashrc in the
+  // default terminal removes all three. The banner shows ONE next action;
+  // STUDENT_WORKFLOW.md is taught in class, deliberately neither linked in
+  // the banner nor auto-opened.
+  // Absolute path via ${containerWorkspaceFolder} so it resolves regardless of
+  // the folder the student later opens. See setup.sh and welcome.sh.
+  "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
+
+  "customizations": {
+    "vscode": {
+
+      // Extensions students actually need.
+      //
+      // DELIBERATELY ABSENT: the AI assistant *extensions* (anthropic.claude-code,
+      // openai.chatgpt). The AI tools ship as CLIs in the image (claude, codex,
+      // agy, grok, aider) and that is intentional — do NOT add the extension panels
+      // here. Tested 2026-06: the in-editor panels are webviews that render
+      // broken in the browser-based Codespaces client (garbled/overlapping UI),
+      // and there is no reliable desktop fallback for a big slice of students —
+      // VS Code Desktop does not exist for iPad or ChromeOS, and drops Windows
+      // 7/8. The integrated terminal (and thus the CLIs) renders fine on every
+      // device, so CLIs are the device-agnostic answer. (Same Codespaces-remote
+      // webview class of failure that got the Gemini companion extension dropped.)
+      // NOTE — PPBDS.vscode-r-tutorials is deliberately NOT in this list.
+      // We publish it to Open VSX, and this list can only install from the
+      // Microsoft Marketplace (whose copy is stale). The extension is baked
+      // into the image instead (RT_EXT_VERSION build arg in the
+      // PPBDS/devcontainers Dockerfile), pre-extracted from the Open VSX
+      // .vsix so its Activity Bar icon exists from first window paint — an
+      // attach-time install needed a window reload. Ship a new version by
+      // bumping RT_EXT_VERSION there and cutting an image release.
+      "extensions": [
+        // vscode-R, PINNED to the version the image bakes (3.2.2 since image
+        // v1.3.5; 3.2.0 in v1.2.9–v1.3.2 and v1.3.4; 3.0.1 from v1.1.7, the 3.0
+        // migration). Keep this in lockstep with VSCODE_R_VERSION in the
+        // PPBDS/devcontainers Dockerfile: the image bakes this exact .vsix AND
+        // the `sess` R package bundled inside it, which 3.x needs to attach to
+        // an R session (plots, workspace viewer). A different version here
+        // would install over the baked one and, if its bundled sess differs,
+        // prompt every student to install sess. An UNPINNED entry would
+        // auto-update every Codespace the day a new release hits the
+        // Marketplace — exactly how 2.8.8 → 3.0.1 broke plots on a synced
+        // account on 2026-10-05 (Rplots.pdf, no error).
+        // This pin only chooses the version installed at create; what stops
+        // VS Code auto-updating the baked extension later is the image, which
+        // since v1.3.4 marks every baked extension pinned in the extensions
+        // directory's metadata (extensions.autoUpdate itself is
+        // application-scoped, unsettable here). Lesson of 2026-10-24/25: a
+        // STABLE upstream release can be broken (3.2.1 shipped unusable plot
+        // and help viewers; fixed in 3.2.2 two days later), so every vscode-R
+        // move is an image release, checked in a fresh Codespace with
+        // plot(1:10) AND ?mean before the repin.
+        // Since v1.1.7 every extension in this list is also baked in the
+        // image (see the Dockerfile), so VS Code finds them installed and
+        // installs nothing at attach; the list stays so the pins are
+        // declared where VS Code reads them.
+        "reditorsupport.r@3.2.2",
+        "quarto.quarto",
+        "ritwickdey.LiveServer",
+        "tomoki1207.pdf",
+        "mechatroner.rainbow-csv"
+        // ALSO DELIBERATELY ABSENT (dropped 2026-08-20, David): the Python
+        // extensions (ms-python.python, ms-toolsai.jupyter). Students use
+        // only a handful of Activity Bar icons, and these two added Python/
+        // Jupyter icons plus Welcome-page walkthrough cards for tooling the
+        // course doesn't teach interactively. Removing them does NOT break
+        // the Python workflow that matters: `quarto render` of .qmd files
+        // with Python chunks drives the image's Jupyter engine from the CLI,
+        // no editor extension involved. What's lost is only the in-editor
+        // layer: .ipynb notebook UI, run-buttons on Python cells, Python
+        // IntelliSense. If the syllabus later adds interactive Python,
+        // re-add both lines AND re-add the python.defaultInterpreterPath /
+        // python.terminal.activateEnvironment settings (see git history at
+        // this line for the exact blocks and their reasoning — especially
+        // activateEnvironment: false, which prevented the extension from
+        // corrupting the R Tutorial terminal).
+      ],
+
+      "settings": {
+
+        // Make Copilot Chat read AGENTS.md from the workspace root. Inert in
+        // this launcher (which deliberately has no AGENTS.md); it matters in
+        // the student's own repo, where connect-repo.sh places one by default
+        // (skippable via --no-agents). Set explicitly because some VS Code
+        // versions ship it off. Canonical file: .devcontainer/AGENTS.md.
+        "chat.useAgentsMdFile": true,
+
+        // (python.defaultInterpreterPath and python.terminal.activateEnvironment
+        // were removed 2026-08-20 along with the Python extensions — see the
+        // DELIBERATELY ABSENT note in the extensions list above. Restore both
+        // settings if those extensions ever return.)
+
+        // GITHUB_TOKEN is NOT blanked in terminals — REMOVED 2026-10-30. Until
+        // then this block emptied it in every integrated terminal (including
+        // the R console), to silence remotes' "Using github PAT from envvar
+        // GITHUB_TOKEN ... use the more secure credential store" nag on
+        // install_github. A live check in a fresh Codespace showed the cost:
+        // the blank really holds in bash (echo "[$GITHUB_TOKEN]" printed [],
+        // `gh auth status` said "not logged into any GitHub hosts"), so a raw
+        // Codespace here did NOT look like a raw Codespace, where gh is signed
+        // in as the built-in token — and the GitHub Introduction tutorial's
+        // raw-machine transcript, which shows "(GITHUB_TOKEN)", was wrong for
+        // our students. Removing the blank makes that tutorial true again,
+        // makes connect-repo's `unset GITHUB_TOKEN` step do real work (it was
+        // redundant inside terminals), and keeps R's GitHub API calls via pak
+        // authenticated, so a classroom of Codespaces behind shared IPs does
+        // not hit the anonymous 60/hour rate limit. The remotes nag returns
+        // only for remotes::install_github, which the course does not use
+        // (every install goes through pak::pkg_install, which does not nag).
+        // If the nag ever matters, the right fix is one line in the IMAGE's
+        // Rprofile.site, guarded on CODESPACES — next to R, not here.
+        // GH_TOKEN is likewise never touched (2026-10-29): Codespaces never
+        // sets it, and the Dotfiles tutorial has students store a personal
+        // access token as the Codespaces user secret GH_TOKEN, which gh
+        // prefers over GITHUB_TOKEN and which `gh auth git-credential` hands
+        // to git — that is what signs a fresh Codespace in as the student
+        // without connect-repo. Blanking it here silently undid that.
+        // PKG_SYSREQS=false stops pak from trying to `sudo apt-get install`
+        // system requirements when a student installs an R package — the
+        // non-root rstudio user can't sudo, so e.g. a package pulling in V8
+        // would otherwise die on "System command 'sudo' failed". The system
+        // libs our packages need are provided by the base image (geospatial,
+        // text-shaping, …); pak builds against those. With this off pak still
+        // PRINTS any sysreq it believes is missing but does not install it.
+        // NOTE: this is primarily set GLOBALLY in the student image itself
+        // (ENV PKG_SYSREQS=false in the devcontainers Dockerfile), which already covers
+        // the build, postCreate, and runtime terminals. It is repeated here as
+        // a terminal-scoped belt-and-suspenders. (Separately, the V8 "missing
+        // libnode-dev" false positive is handled in the image via a metadata
+        // libnode-dev-virtual package — see the devcontainers Dockerfile.)
+        "terminal.integrated.env.linux": {
+          "PKG_SYSREQS": "false"
+        },
+
+        // Use arf (Rust-based R console) instead of the default R terminal.
+        // Point at the stable /usr/local/bin/arf symlink the base image
+        // provides for exactly this purpose (see the Dockerfile in
+        // PPBDS/devcontainers), NOT the real /home/rstudio/.cargo/bin/arf
+        // path — that way a change to the image's default user only touches
+        // that Dockerfile, not this consumer setting. (vscode-R 3.0 renamed
+        // this from the per-platform r.rterm.linux, now deprecated; the
+        // vanilla-R path for background processes, r.executablePath, is left
+        // at its default, which resolves `R` from PATH.)
+        "r.consolePath": "/usr/local/bin/arf",
+
+        // Required for arf-style consoles to handle pasted code correctly.
+        "r.bracketedPaste": true,
+
+        // Render plots inside VS Code via the httpgd graphics device instead
+        // of opening an external window (which doesn't work in Codespaces).
+        // vscode-R 3.0 replaced the boolean r.plot.useHttpgd (deprecated)
+        // with a backend choice; "auto" would prefer jgd when installed, so
+        // name httpgd explicitly — it is what the image bakes and what every
+        // tutorial was written against.
+        "r.plot.backend": "httpgd",
+
+        // Close VS Code's Welcome tab once the window has started, so the
+        // editor area is empty and the terminal with the banner is what
+        // students see (David, 2026-10-05). The setting that would stop the
+        // tab opening, workbench.startupEditor, is application-scoped and
+        // ignored here (see the note further down), so our own R Tutorials
+        // extension (baked, >= 1.2.0) does the closing when this is on.
+        "rTutorials.closeWelcomeOnStartup": true,
+
+        // Word boundaries for R: treat `.` and `_` as parts of a name, so a
+        // double-click on `my_data.frame` selects the whole thing. This used
+        // to arrive invisibly via the rocker base image's r-rig feature
+        // metadata; image v1.1.8 stopped inheriting that metadata (it also
+        // smuggled in extensions), so the one setting worth keeping lives
+        // here, where it can be seen.
+        "[r]": {
+          "editor.wordSeparators": "`~!@#%$^&*()-=+[{]}\\|;:'\",<>/?"
+        },
+
+        // Live Server opens its tab through the image's xdg-open (which, since
+        // image v1.3.1, builds the Codespaces forwarded address of the clicked
+        // file and hands it to VS Code's browser helper — issue #74). Name it
+        // EXPLICITLY: with no custom browser set, Live Server's default launch
+        // (the `opn` package resolving `xdg-open` itself from the extension
+        // host) never produced a tab, while this setting — which makes it
+        // spawn the given command with the URL — opens the file on every click
+        // (verified in a live Codespace, 2026-10-24, after the 1.3.1 rollout
+        // shipped without it and students got NO tab at all, since the port
+        // pop-up below was already silenced). The path is the image's stable
+        // stub, not a browser; do not point this at a browser name.
+        "liveServer.settings.AdvanceCustomBrowserCmdLine": "/usr/local/bin/xdg-open",
+
+        // Live Server: no "Server is Started at port : 5500" info box on every
+        // Go Live (the tab opening is the feedback). Its "Don't show again"
+        // button sets exactly this key.
+        "liveServer.settings.donotShowInfoMsg": true,
+
+        // Make the "Run Source" button (the ▷ in the editor title bar) and its
+        // Ctrl/Cmd+Shift+S shortcut run source(FILE, echo = TRUE) instead of a
+        // silent source, so students see each line echo as it executes — not
+        // just the final output.
+        "r.source.echo": true,
+
+        // DELIBERATELY ABSENT (removed 2026-10 with the one-terminal design):
+        // terminal.integrated.environmentChangesRelaunch and …hideOnStartup.
+        // The first existed to keep a relaunch from wiping the banner out of
+        // the postAttach terminal (and turning it off is what CAUSED the ⚠
+        // indicator); the second hid the default terminal so students saw
+        // only the Welcome one (it didn't: the Codespaces client creates it
+        // regardless). With the banner printed from ~/.bashrc a relaunch
+        // just reprints it (welcome.sh delays its "shown" marker for exactly
+        // this), so relaunch stays at its default. Do not re-add either
+        // without re-reading setup.sh's history note.
+
+        // The "⚠ extensions want to relaunch the terminal" icon on the FIRST
+        // terminal is ACCEPTED — there is no knob (closed 2026-10-05). It
+        // shows because the Codespaces client creates that terminal before
+        // the Git and GitHub Codespaces extensions activate, and VS Code
+        // does not auto-relaunch extension-created terminals. The only
+        // setting that ever hid it, terminal.integrated.environmentChanges-
+        // Indicator, was REMOVED from VS Code on 2025-10-08 (microsoft/vscode
+        // 0d826f5) — which is why setting it "off" in 2026-08 did nothing.
+        // Harmless: the contribution it warns about is irrelevant here (git
+        // auth comes from the container's credential store). Do not try
+        // again.
+
+        // No "Type copilot to use Copilot CLI. Don't show this again" ghost
+        // text in an empty terminal. That is VS Code's terminal initial
+        // hint; "Don't show this again" sets exactly this key. Window-scoped
+        // (terminalInitialHintConfiguration.ts), so unlike the trust and
+        // startup-editor settings it IS honored from here.
+        "terminal.integrated.initialHint": false,
+
+        // NOTE — we want to suppress VS Code's Welcome / "Get Started" tab,
+        // but there is currently NO way to do it from here. The setting that
+        // controls it, workbench.startupEditor, is application-scoped: VS
+        // Code only honors it in per-user settings and deliberately IGNORES
+        // it in workspace/remote/devcontainer settings. So a
+        // "workbench.startupEditor": "none" line here is a confirmed no-op in
+        // Codespaces (see microsoft/vscode#134073, #160635, #242243) — it was
+        // removed rather than left as dead config that looks like it works.
+        // Revisit if that bug is ever fixed. Since image v1.1.7 the tab is
+        // instead CLOSED right after startup by the baked R Tutorials
+        // extension (rTutorials.closeWelcomeOnStartup above).
+        //
+        // Likewise ABSENT: anything about Workspace Trust. Every
+        // security.workspace.trust.* setting is application-scoped too, read
+        // only from the browser-side user settings — nothing bakeable here,
+        // in the image, or in a script can stop the "Do you trust the
+        // authors?" modal (vscode workspace.contribution.ts; the 2026-08
+        // "fix" was a false positive). Students click "Trust Folder &
+        // Continue", twice: at start and again after connect-repo's Open
+        // Folder. Do not spend more time on this.
+
+        // Auto-stage all changes on commit so students don't get a confusing
+        // dialog asking whether to stage files.
+        "git.enableSmartCommit": true,
+
+        // Don't prompt "are you sure?" before push/pull.
+        "git.confirmSync": false,
+
+        // Don't inject VS Code's git-askpass into terminals (GIT_ASKPASS and
+        // friends). Terminal git auth here comes from the container's
+        // credential store, which connect-repo sets up (`credential.helper
+        // store` + the student's token) — VS Code's injection is redundant.
+        // (It was also one of the two extensions behind the old "⚠ extensions
+        // want to relaunch the terminal" warning; the GitHub Codespaces
+        // extension is the other, and with relaunch back at its default the
+        // warning no longer appears for either.) The Source Control panel's
+        // own auth is a separate setting (github.gitAuthentication) and is
+        // untouched. Verify after any change: `connect-repo` end to end, then
+        // a terminal `git push`.
+        "git.terminalAuthentication": false,
+
+        // Fetch from the remote in the background. This was `false` (2026-07,
+        // "keeps things predictable, avoids confusing status-bar changes") until
+        // 2026-09-16, when reading the Git extension's source showed that ONLY
+        // `true` suppresses the "Would you like Code to periodically run git
+        // fetch?" popup: the prompt fires whenever autofetch is not `true` AND a
+        // per-Codespace "already asked" flag is unset — so `false` and unset
+        // are treated identically, and every fresh Codespace asked again on the
+        // student's first push/sync. The cost of `true` is an occasional ↓N
+        // status-bar arrow when the remote has commits the local doesn't, which
+        // for a solo student repo essentially only happens across two
+        // Codespaces. Do NOT set this back to false expecting the popup to stop.
+        "git.autofetch": true,
+
+        // Auto-save files after a short delay. Prevents the #1 beginner
+        // problem: "my code isn't working" because the file wasn't saved.
+        "files.autoSave": "afterDelay",
+
+        // Stop VS Code from suggesting random extensions students don't need.
+        "extensions.ignoreRecommendations": true,
+
+        // Prevent the "open repository in parent folder?" prompt that
+        // confuses students who don't understand nested git repos.
+        "git.openRepositoryInParentFolders": "never",
+
+        // Prevent extensions from opening walkthrough tabs on first install.
+        "workbench.welcomePage.walkthroughs.openOnInstall": false,
+
+        // Wrap long lines so students don't think code disappeared
+        // off the right edge of the screen.
+        "editor.wordWrap": "on",
+
+        // Disable the minimap — beginners don't use it and it wastes
+        // screen space, especially on Chromebooks and small laptops.
+        "editor.minimap.enabled": false,
+
+        // Prevent VS Code from opening files in "preview" mode (italic
+        // tab title) which silently replaces the tab when another file
+        // is clicked. Beginners think their file vanished.
+        "workbench.editor.enablePreview": false
+      }
+    }
+  }
+}
