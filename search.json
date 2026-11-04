@@ -4,7 +4,7 @@
     "href": "index.html",
     "title": "Billboard Graphic",
     "section": "",
-    "text": "library(tidyverse)"
+    "text": "library(tidyverse)\nlibrary(knitr)"
   },
   {
     "objectID": "about.html",
